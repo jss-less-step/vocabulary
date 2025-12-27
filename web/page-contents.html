@@ -1,0 +1,1279 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>保存的页面内容</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: #1f2937;
+            -webkit-font-smoothing:antialiased;
+            -moz-osx-font-smoothing:grayscale;
+            min-height: 100vh;
+            padding: 24px 16px;
+            line-height: 1.45;
+        }
+
+        .page-item-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 20px;
+        }
+
+        .page-item-btn {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 4px;
+            font-size: 0.9em;
+            cursor: pointer;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+
+        .mark-read-btn {
+            background: #667eea;
+            color: white;
+        }
+
+        .mark-read-btn:hover {
+            background: #5568d3;
+        }
+
+        .delete-btn {
+            background: #f5576c;
+            color: white;
+        }
+
+        .delete-btn:hover {
+            background: #e6455c;
+        }
+
+        .page-item.read {
+            opacity: 0.7;
+        }
+
+        .read-badge {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 0.75em;
+            margin-left: 8px;
+        }
+
+        .page-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            padding: 16px;
+            border: 1px solid rgba(16,24,40,0.06);
+            border-radius: 10px;
+            background: #ffffff;
+            margin-bottom: 14px;
+            transition: transform 200ms ease, box-shadow 200ms ease, opacity 200ms ease;
+            cursor: pointer;
+            will-change: transform, box-shadow;
+        }
+
+        .page-item:hover {
+            transform: translateY(-6px);
+            border-color: rgba(99,102,241,0.18);
+            box-shadow: 0 12px 30px rgba(16,24,40,0.06);
+        }
+
+        .page-item:active {
+            transform: translateY(-2px) scale(0.998);
+        }
+
+        .page-item.read {
+            opacity: 0.8;
+            filter: grayscale(0.02);
+        }
+
+        .page-item-content {
+            flex: 1 1 auto;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            padding-right: 12px;
+        }
+
+        .page-item-actions {
+            display: flex;
+            gap: 8px;
+            margin-left: 12px;
+            align-items: center;
+        }
+
+        /* 微动画：项进入 */
+        @keyframes itemFadeInUp {
+            from { opacity: 0; transform: translateY(6px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        .page-item { animation: itemFadeInUp 320ms cubic-bezier(.2,.9,.3,1) both; }
+        .page-date{
+            font-size: 0.85em;
+            color: #888;
+        }
+        .page-url {
+            font-size: 0.85em;
+            color: #666;
+            word-break: break-all;
+            display: inline;
+            width: 40%;
+            text-decoration: none;
+        }
+        .page-title{
+            font-size: 1.05em;
+            font-weight: 600;
+            color: #222;
+        }
+        .page-url:hover {
+            text-decoration: underline;
+            color:#4757d1;
+            font-weight: 600;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            overflow-y: auto;
+        }
+
+        .modal-content {
+            background: white;
+            max-width: 900px;
+            margin: 50px auto;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            position: relative;
+        }
+
+        .modal-header {
+            padding: 16px 20px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 1.1em;
+            font-weight: 600;
+            color: #333;
+        }
+
+        .close-btn {
+            background: none;
+            border: none;
+            font-size: 1.5em;
+            color: #999;
+            cursor: pointer;
+            padding: 0;
+            width: 30px;
+            height: 30px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 50%;
+            transition: background 0.2s;
+        }
+
+        .close-btn:hover {
+            background: #f0f0f0;
+            color: #333;
+        }
+
+        .modal-body {
+            padding: 20px;
+            max-height: calc(100vh - 250px);
+            overflow-y: auto;
+        }
+
+        .container{
+            margin: 28px auto;
+            max-width: 1100px;
+            padding: 28px;
+            border-radius: 14px;
+            background: linear-gradient(180deg, #ffffff 0%, #fbfbff 100%);
+            box-shadow: 0 10px 30px rgba(16,24,40,0.06), 0 3px 8px rgba(16,24,40,0.03);
+            border: 1px solid rgba(16,24,40,0.04);
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 12px;
+            gap: 12px;
+        }
+
+        .header h1 {
+            font-size: 1.15em;
+            color: #0f1724;
+            font-weight: 700;
+        }
+
+        /* 固定的小抄侧边栏容器 */
+        .cheatsheet-container {
+            position: fixed;
+            right: 20px;
+            top: 80px;
+            bottom: 20px;
+            width: 300px;
+            height: calc(100vh - 120px);
+            overflow-y: auto;
+            background: #fff;
+            border-radius: 12px;
+            box-shadow: 0 14px 36px rgba(16,24,40,0.08);
+            padding: 14px;
+            z-index: 1100;
+            border: 1px solid #eef1f6;
+        }
+
+        .cheatsheet-title {
+            font-size: 0.95em;
+            font-weight: 600;
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        /* 生词项样式 */
+        .word-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border: 1px solid #eee;
+            border-radius: 8px;
+            background: #fff;
+            margin-bottom: 10px;
+            transition: all 0.2s ease;
+        }
+
+        .word-item:hover {
+            border-color: #667eea;
+            background: #f6f8ff;
+            box-shadow: 0 6px 18px rgba(102, 126, 234, 0.15);
+            transform: translateX(2px);
+        }
+
+        .word-item.active {
+            border-color: #764ba2;
+            background: #eef2ff;
+        }
+
+        .word-info {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .word-title {
+            font-weight: 700;
+            color: #222;
+            font-size: 14px;
+            letter-spacing: 0.3px;
+        }
+
+        .word-meta {
+            font-size: 12px;
+            color: #888;
+            margin-top: 4px;
+        }
+
+        .word-actions {
+            display: flex;
+            gap: 8px;
+        }
+
+        .speak-btn {
+            border: none;
+            border-radius: 6px;
+            padding: 6px 10px;
+            background: #667eea;
+            color: #fff;
+            cursor: pointer;
+            font-size: 12px;
+            box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+            transition: background 0.2s, transform 0.1s;
+        }
+
+        .speak-btn:hover {
+            background: #5568d3;
+        }
+
+        .speak-btn:active {
+            transform: scale(0.98);
+        }
+
+        .page-content {
+            line-height: 1.8;
+            color: #333;
+        }
+
+        .page-content p {
+            margin-bottom: 1em;
+            text-indent: 2em;
+            line-height: 1.8;
+        }
+
+        .page-content h1,
+        .page-content h2,
+        .page-content h3,
+        .page-content h4,
+        .page-content h5,
+        .page-content h6 {
+            margin-top: 1.5em;
+            margin-bottom: 0.8em;
+            font-weight: 600;
+            color: #222;
+        }
+
+        .page-content h1 {
+            font-size: 2em;
+        }
+
+        .page-content h2 {
+            font-size: 1.5em;
+        }
+
+        .page-content h3 {
+            font-size: 1.3em;
+        }
+
+        .page-content h4 {
+            font-size: 1.1em;
+        }
+
+        .page-content blockquote {
+            border-left: 4px solid #667eea;
+            padding-left: 20px;
+            margin: 1em 0;
+            color: #666;
+            font-style: italic;
+        }
+
+        .page-content pre {
+            background: #f5f5f5;
+            padding: 15px;
+            border-radius: 8px;
+            overflow-x: auto;
+            margin: 1em 0;
+        }
+
+        .page-content code {
+            background: #f5f5f5;
+            padding: 2px 6px;
+            border-radius: 3px;
+            font-family: "Courier New", monospace;
+            font-size: 0.9em;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: #999;
+            font-size: 1.1em;
+        }
+
+        .empty {
+            text-align: center;
+            padding: 60px;
+            color: #999;
+        }
+
+        .empty-icon {
+            font-size: 4em;
+            margin-bottom: 20px;
+            opacity: 0.3;
+        }
+
+        .header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            margin-bottom: 0;
+        }
+
+        /* 按钮：在白色卡片上的可见样式 */
+        .back-btn, .fetch-bbc-btn, .page-item-btn {
+            padding: 8px 14px;
+            background: #f8fafc;
+            color: #0f1724;
+            border: 1px solid rgba(15,23,36,0.08);
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 160ms ease, background 160ms ease, box-shadow 160ms ease;
+            font-size: 0.95em;
+        }
+
+        .back-btn:hover, .fetch-bbc-btn:hover, .page-item-btn:hover {
+            background: #eef2ff;
+            transform: translateY(-3px);
+            box-shadow: 0 8px 18px rgba(102,118,234,0.08);
+        }
+
+        .page-item-btn {
+            padding: 6px 12px;
+            font-size: 0.9em;
+        }
+
+        .mark-read-btn {
+            background: linear-gradient(90deg,#6b7ffb,#5a66d8);
+            color: #fff;
+            border: 1px solid rgba(90,102,216,0.15);
+        }
+
+        .mark-read-btn:hover {
+            background: linear-gradient(90deg,#596ef5,#4757d1);
+            box-shadow: 0 8px 18px rgba(69,87,209,0.12);
+        }
+
+        .delete-btn {
+            background: linear-gradient(90deg,#ff7b8a,#ff5a6f);
+            color: #fff;
+            border: 1px solid rgba(255,90,111,0.12);
+        }
+
+        .delete-btn:hover {
+            background: linear-gradient(90deg,#ff6b78,#ff445e);
+            box-shadow: 0 8px 18px rgba(255,68,94,0.12);
+        }
+
+        .fetch-bbc-btn:disabled, .page-item-btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        @media (max-width: 768px) {
+            .header {
+                flex-direction: column;
+                gap: 15px;
+            }
+
+            .page-item-actions {
+                flex-direction: column;
+                gap: 4px;
+            }
+
+            .page-item {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .page-item-actions {
+                margin-left: 0;
+                margin-top: 10px;
+                width: 100%;
+            }
+
+            .page-item-btn {
+                width: 100%;
+            }
+        }
+
+        @keyframes slideOut {
+            from {
+                opacity: 1;
+                transform: translateX(0);
+            }
+
+            to {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+        }
+
+        /* 全局 loading 覆盖层 */
+        .global-loader {
+            display: none;
+            position: fixed;
+            inset: 0;
+            background: rgba(0, 0, 0, 0.45);
+            z-index: 2000;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .global-loader.show {
+            display: flex;
+        }
+
+        .global-loader .spinner {
+            width: 64px;
+            height: 64px;
+            border-radius: 50%;
+            border: 6px solid rgba(255, 255, 255, 0.2);
+            border-top-color: #fff;
+            animation: spin 0.9s linear infinite;
+            box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+        }
+
+        @keyframes spin {
+            to {
+                transform: rotate(360deg);
+            }
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="header">
+            <div style="display:flex;align-items:center;gap:12px;">
+                <a href="index.html" class="back-btn">← 返回主页</a>
+                <h1>📄 文章阅读</h1>
+            </div>
+            <div style="display:flex;gap:8px;align-items:center;">
+                <button class="fetch-bbc-btn" onclick="fetchBbcArticles()">📰 抓取 BBC 文章</button>
+            </div>
+        </div>
+
+        <div style="margin-bottom:12px;display:flex;gap:8px;align-items:center;">
+            <input id="searchInput" type="text" placeholder="按标题搜索..."
+                style="flex:1;padding:8px;border-radius:6px;border:1px solid #ddd;" />
+            <select id="sortBy" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+                <option value="lastViewedAt">按最近查看</option>
+                <option value="viewCount">按查看次数</option>
+                <option value="capturedAt">按抓取时间</option>
+            </select>
+            <select id="order" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+                <option value="desc">降序</option>
+                <option value="asc">升序</option>
+            </select>
+            <select id="limit" style="padding:8px;border-radius:6px;border:1px solid #ddd;">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="20">20</option>
+            </select>
+            <button id="searchBtn" class="back-btn" style="padding:8px 12px;">查询</button>
+        </div>
+
+        <div class="pages-list" id="pagesList">
+            <div class="loading">加载中...</div>
+        </div>
+        <div style="margin-top:12px;display:flex;justify-content:flex-end;gap:8px;align-items:center;"
+            id="paginationBar"></div>
+    </div>
+
+    <!-- 全局 loading 覆盖层 -->
+    <div id="globalLoader" class="global-loader" aria-hidden="true">
+        <div class="spinner" role="status" aria-label="Loading"></div>
+    </div>
+
+    <!-- 模态框 -->
+    <div class="modal" id="pageModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="modalTitle">页面内容</div>
+                <button class="close-btn" onclick="closeModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div class="page-content" id="pageContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- 固定小抄侧边栏（默认隐藏，打开页面内容时显示） -->
+    <div class="cheatsheet-container" id="cheatsheetContainer" style="display:none;">
+        <div class="cheatsheet-title">📝 该页面的生词</div>
+        <div id="wordsSidebar"></div>
+    </div>
+
+    <!-- 单词详情模态框 -->
+    <div class="modal" id="wordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title" id="wordModalTitle">单词详情</div>
+                <button class="close-btn" onclick="closeWordModal()">×</button>
+            </div>
+            <div class="modal-body">
+                <div id="wordContent"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'http://localhost:3000';
+
+        // 查看页面详情
+        let currentWords = [];
+        let currentPageContentId = null;
+
+        async function viewPage(id) {
+            try {
+                const response = await fetch(`${API_BASE}/page-contents/${id}/detail`);
+                const data = await response.json();
+
+                if (!data.page) {
+                    alert('页面不存在');
+                    return;
+                }
+
+                currentPageContentId = id; // 保存当前页面内容ID
+                document.getElementById('modalTitle').textContent = data.page.title;
+                document.getElementById('pageContent').innerHTML = data.page.content;
+                currentWords = data.words || [];
+                renderWordsSidebar(currentWords);
+                document.getElementById('pageModal').style.display = 'block';
+                // 显示小抄侧边栏
+                document.getElementById('cheatsheetContainer').style.display = 'block';
+                // 启用划词功能
+                enableWordSelection();
+            } catch (err) {
+                console.error('加载页面内容失败:', err);
+                alert('加载失败');
+            }
+        }
+
+        // 点击按钮：请求后端 /fetch-bbc-articles
+        async function fetchBbcArticles() {
+            //每天只能抓取一次
+            let lastFetch = localStorage.getItem('lastBbcFetchDate');
+            const today = new Date().toISOString().slice(0, 10);
+            if (lastFetch === today) {
+                alert('今天已经抓取过 BBC 文章了，请明天再试。');
+                return;
+            }
+            localStorage.setItem('lastBbcFetchDate', today);
+            const btn = document.querySelector('.fetch-bbc-btn');
+            if (btn) btn.disabled = true;
+            showGlobalLoading();
+            try {
+                const resp = await fetch(`${API_BASE}/fetch-bbc-articles`, { method: 'GET' });
+                if (!resp.ok) {
+                    const errText = await resp.text();
+                    alert('抓取失败: ' + resp.status + ' ' + errText);
+                    return;
+                }else{
+                    alert('正在抓取中...');
+                }
+            } catch (e) {
+                console.error('fetchBbcArticles failed', e);
+                alert('抓取出错：' + (e && e.message ? e.message : e));
+            } finally {
+                hideGlobalLoading();
+                if (btn) btn.disabled = false;
+            }
+        }
+
+        function renderWordsSidebar(words) {
+            const el = document.getElementById('wordsSidebar');
+            if (!words || words.length === 0) {
+                el.innerHTML = '<div style="color:#999;">暂无该页面的生词</div>';
+                return;
+            }
+            el.innerHTML = words.map(w => `
+                <div class="word-item" id="word-item-${w._id}" onclick="openWordModal('${w._id}')">
+                    <div class="word-info">
+                        <div class="word-title">${escapeHtml(w.word)}</div>
+                        <div class="word-meta">添加于：${formatDate(w.captureDate || w.createdAt)}</div>
+                    </div>
+                    <div class="word-actions" onclick="event.stopPropagation()">
+                        <button class="page-item-btn delete-btn" title="删除生词" onclick="event.stopPropagation(); deleteCustomWord('${w._id}')">删除</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 发音：使用浏览器 speechSynthesis
+        function speakWord(text) {
+            try {
+                if (!text || !window.speechSynthesis) return;
+                window.speechSynthesis.cancel();
+                const utter = new SpeechSynthesisUtterance(text);
+                utter.lang = 'en-US';
+                utter.rate = 0.95;
+                utter.pitch = 1;
+                utter.volume = 1;
+                const voices = window.speechSynthesis.getVoices() || [];
+                const enVoice = voices.find(v => v.lang && v.lang.toLowerCase().startsWith('en')) || null;
+                if (enVoice) utter.voice = enVoice;
+                window.speechSynthesis.speak(utter);
+            } catch (e) {
+                console.debug('Speak failed:', e);
+            }
+        }
+
+        function openWordModal(wordId) {
+            const word = (currentWords || []).find(w => String(w._id) === String(wordId));
+            if (!word) return;
+
+            // 高亮选中的词条
+            document.querySelectorAll('.word-item.active').forEach(el => el.classList.remove('active'));
+            const activeEl = document.getElementById(`word-item-${wordId}`);
+            if (activeEl) activeEl.classList.add('active');
+
+            // 标题包含单词与音标
+            const phonetics = [];
+            if (word.us) phonetics.push(`美 /${word.us}/`);
+            if (word.uk) phonetics.push(`英 /${word.uk}/`);
+            const phoneticHtml = phonetics.length ? `<div style="font-size:12px;color:#666;margin-top:6px;">${phonetics.join(' &nbsp;•&nbsp; ')}</div>` : '';
+
+            // 标题含发音按钮
+            const titleHtml = `
+                <div style="display:flex;align-items:center;gap:10px;">
+                    <div style="display:flex;flex-direction:column;">
+                        <span style="font-weight:700;color:#222;">${escapeHtml(word.word)}</span>
+                        ${phoneticHtml}
+                    </div>
+                    <button id="wordModalSpeakBtn" class="speak-btn" title="发音" style="padding:6px 8px;font-size:12px;">🔊 发音</button>
+                </div>`;
+            document.getElementById('wordModalTitle').innerHTML = titleHtml;
+
+            // 释义
+            const translations = Array.isArray(word.translations) ? word.translations : [];
+            const defsHtml = translations.length
+                ? `<div style="margin:12px 0 6px 0;font-weight:600;color:#333;">释义</div>
+                   <ul style="padding-left:18px;">${translations.map(t => `<li>${escapeHtml(t.translation)}${t.type ? ` <span style='color:#999;font-size:12px;'>(${escapeHtml(t.type)})</span>` : ''}</li>`).join('')}</ul>`
+                : `<div style="color:#999;">暂无释义</div>`;
+
+            // 例句
+            const sentences = Array.isArray(word.sentences) ? word.sentences : [];
+            const sentencesHtml = sentences.length
+                ? `<div style="margin:14px 0 6px 0;font-weight:600;color:#333;">例句</div>
+                   ${sentences.map(s => `<div style='margin:6px 0;padding:10px;background:#f8f9fa;border-radius:8px;'>
+                       <div style='color:#333;'>${escapeHtml(s.sentence || '')}</div>
+                       ${s.translation ? `<div style='color:#666;font-size:13px;margin-top:4px;'>${escapeHtml(s.translation)}</div>` : ''}
+                   </div>`).join('')}`
+                : '';
+
+            // 来源
+            const sourceHtml = word.source
+                ? `<div style="margin-top:12px;color:#667eea;word-break:break-all;">来源：${escapeHtml(word.source)}</div>`
+                : '';
+
+            document.getElementById('wordContent').innerHTML = `
+                ${defsHtml}
+                ${sentencesHtml}
+                ${sourceHtml}
+            `;
+
+            // 绑定标题处发音按钮（如果存在）
+            const modalSpeakBtn = document.getElementById('wordModalSpeakBtn');
+            if (modalSpeakBtn) {
+                modalSpeakBtn.addEventListener('click', (e) => { e.stopPropagation(); speakWord(word.word); });
+            }
+
+            document.getElementById('wordModal').style.display = 'block';
+        }
+
+        function closeWordModal() {
+            document.getElementById('wordModal').style.display = 'none';
+            // 取消高亮
+            document.querySelectorAll('.word-item.active').forEach(el => el.classList.remove('active'));
+        }
+
+        // 关闭模态框
+        function closeModal() {
+            document.getElementById('pageModal').style.display = 'none';
+            // 隐藏小抄侧边栏
+            const sheet = document.getElementById('cheatsheetContainer');
+            if (sheet) sheet.style.display = 'none';
+            // 禁用划词功能
+            disableWordSelection();
+            currentPageContentId = null;
+        }
+
+        // ========== 页面内容模态框内的划词功能 ==========
+        let wordSelectionHandler = null;
+
+        function enableWordSelection() {
+            const contentArea = document.getElementById('pageContent');
+            if (!contentArea) return;
+
+            // 移除旧监听器（如果有）
+            disableWordSelection();
+
+            wordSelectionHandler = async function (e) {
+                const selectedText = window.getSelection().toString().trim();
+
+                // 空选择和长度限制
+                if (!selectedText) return;
+                if (selectedText.length < 1 || selectedText.length >= 200) return;
+
+                // 如果不是纯英文单词（例如中文、日文或包含空格/标点），直接调用翻译接口
+                const isPureEnglish = /^[a-zA-Z]+$/.test(selectedText);
+                const queryText = selectedText.trim();
+
+                try {
+                    if (!isPureEnglish) {
+                        // 非英文直接翻译
+                        showGlobalLoading();
+                        try {
+                            const tResp = await fetch(`${API_BASE}/translate?text=${encodeURIComponent(queryText)}&tl=zh-CN`);
+                            const tJson = await tResp.json();
+                            if (tJson && tJson.ok && tJson.raw) {
+                                const translated = parseTranslateResult(tJson.raw);
+                                showTranslationResult(queryText, translated);
+                            } else {
+                                console.log('翻译接口未返回结果');
+                            }
+                        } catch (e) {
+                            console.error('调用翻译接口失败:', e);
+                        } finally {
+                            hideGlobalLoading();
+                        }
+                        return;
+                    }
+
+                    // 纯英文单词：先查询本地 vocabulary 数据库
+                    const word = queryText.toLowerCase();
+                    const response = await fetch(`${API_BASE}/search-word?word=${encodeURIComponent(word)}`);
+                    const data = await response.json();
+
+                    if (!data.found || !data.data) {
+                        console.log('单词未在数据库中找到，尝试使用 Google 翻译:', word);
+                        showGlobalLoading();
+                        try {
+                            const tResp = await fetch(`${API_BASE}/translate?text=${encodeURIComponent(word)}&tl=zh-CN`);
+                            const tJson = await tResp.json();
+                            if (tJson && tJson.ok && tJson.raw) {
+                                const translated = parseTranslateResult(tJson.raw);
+                                showTranslationResult(word, translated);
+                            } else {
+                                console.log('翻译接口未返回结果');
+                            }
+                        } catch (e) {
+                            console.error('调用翻译接口失败:', e);
+                        } finally {
+                            hideGlobalLoading();
+                        }
+                        return;
+                    }
+
+                    const wordData = data.data;
+
+                    // 先把词条添加到 custom-words（若已存在会 upsert），然后刷新侧边栏并使用侧边栏的 modal 展示
+                    const upsertId = await addWordToCustomWords(wordData, currentPageContentId);
+                    await refreshCurrentPageWords();
+
+                    // 尝试按 upsertId 或 word 名称在 currentWords 中查找对应条目
+                    let foundItem = null;
+                    if (upsertId) {
+                        foundItem = currentWords.find(w => String(w._id) === String(upsertId));
+                    }
+                    if (!foundItem) {
+                        foundItem = currentWords.find(w => (w.word || '').toLowerCase() === (wordData.word || '').toLowerCase());
+                    }
+
+                    if (foundItem && foundItem._id) {
+                        openWordModal(foundItem._id);
+                    } else {
+                        // 回退：如果未能在自定义列表中找到，仍展示临时详情
+                        showWordDetailFromVocabulary(wordData);
+                    }
+
+                } catch (err) {
+                    console.error('查询单词失败:', err);
+                }
+            };
+
+            contentArea.addEventListener('mouseup', wordSelectionHandler);
+        }
+
+        function disableWordSelection() {
+            const contentArea = document.getElementById('pageContent');
+            if (contentArea && wordSelectionHandler) {
+                contentArea.removeEventListener('mouseup', wordSelectionHandler);
+                wordSelectionHandler = null;
+            }
+        }
+
+        // 展示从 vocabulary 查询到的单词详情
+        function showWordDetailFromVocabulary(wordData) {
+            const word = wordData.word || wordData.Word || '';
+            const phonetics = [];
+            if (wordData.us) phonetics.push(`美 /${wordData.us}/`);
+            if (wordData.uk) phonetics.push(`英 /${wordData.uk}/`);
+            const phoneticHtml = phonetics.length ? `<div style="font-size:12px;color:#666;margin-top:6px;">${phonetics.join(' &nbsp;•&nbsp; ')}</div>` : '';
+
+            document.getElementById('wordModalTitle').innerHTML = `${escapeHtml(word)}${phoneticHtml}`;
+
+            // 释义
+            const translations = Array.isArray(wordData.translations) ? wordData.translations : [];
+            const defsHtml = translations.length
+                ? `<div style="margin:12px 0 6px 0;font-weight:600;color:#333;">释义</div>
+                   <ul style="padding-left:18px;">${translations.map(t => `<li>${escapeHtml(t.translation || t)}${t.type ? ` <span style='color:#999;font-size:12px;'>(${escapeHtml(t.type)})</span>` : ''}</li>`).join('')}</ul>`
+                : `<div style="color:#999;">暂无释义</div>`;
+
+            // 例句
+            const sentences = Array.isArray(wordData.sentences) ? wordData.sentences : [];
+            const sentencesHtml = sentences.length
+                ? `<div style="margin:14px 0 6px 0;font-weight:600;color:#333;">例句</div>
+                   ${sentences.map(s => `<div style='margin:6px 0;padding:10px;background:#f8f9fa;border-radius:8px;'>
+                       <div style='color:#333;'>${escapeHtml(s.sentence || '')}</div>
+                       ${s.translation ? `<div style='color:#666;font-size:13px;margin-top:4px;'>${escapeHtml(s.translation)}</div>` : ''}
+                   </div>`).join('')}`
+                : '';
+
+            document.getElementById('wordContent').innerHTML = `
+                <div style="background:#e8f5e9;padding:10px;border-radius:8px;margin-bottom:12px;color:#2e7d32;font-size:13px;">
+                    ✓ 已自动添加到该页面的生词本
+                </div>
+                ${defsHtml}
+                ${sentencesHtml}
+            `;
+
+            document.getElementById('wordModal').style.display = 'block';
+        }
+
+        // 解析 Google 翻译的原始返回结构，尽可能提取文本
+        function parseTranslateResult(raw) {
+            try {
+                if (!raw) return '';
+                if (typeof raw === 'string') return raw;
+                // raw 通常为数组，[ [ [translated, original, ...], ... ], ... ]
+                if (Array.isArray(raw) && Array.isArray(raw[0])) {
+                    const parts = raw[0].map(item => (Array.isArray(item) ? item[0] : '')).filter(Boolean);
+                    return parts.join('');
+                }
+                return JSON.stringify(raw);
+            } catch (e) {
+                return '';
+            }
+        }
+
+        // 全局 loading 控制
+        function showGlobalLoading() {
+            const el = document.getElementById('globalLoader');
+            if (el) el.classList.add('show');
+        }
+
+        function hideGlobalLoading() {
+            const el = document.getElementById('globalLoader');
+            if (el) el.classList.remove('show');
+        }
+
+        // 显示翻译结果（Google 翻译）
+        function showTranslationResult(word, translation) {
+            // 标题中加入发音按钮
+            const titleHtml = `<div style="display:flex;align-items:center;gap:8px;"><div style=\"font-weight:700;font-size:16px;color:#222;\">${escapeHtml(word)}</div><button id=\"translationSpeakBtn\" class=\"speak-btn\" style=\"padding:6px 8px;font-size:12px;\">🔊 发音</button></div>`;
+            const transHtml = translation
+                ? `<div style="margin:12px 0;padding:12px;background:#fff3e0;border-radius:8px;border:1px solid #ffe0b2;color:#6a4a00;">${escapeHtml(translation)}</div>`
+                : `<div style="color:#999;">未获得翻译结果</div>`;
+
+            document.getElementById('wordModalTitle').innerHTML = titleHtml + `<div style="font-size:12px;color:#666;margin-top:6px;">（来自 Google 翻译）</div>`;
+            document.getElementById('wordContent').innerHTML = `
+                ${transHtml}
+                <div style="margin-top:10px;color:#666;font-size:12px;">提示：此翻译来自公共 Google 翻译接口，供参考。</div>
+            `;
+
+            // 绑定发音按钮事件
+            const speakBtn = document.getElementById('translationSpeakBtn');
+            if (speakBtn) speakBtn.addEventListener('click', () => speakWord(word));
+
+            document.getElementById('wordModal').style.display = 'block';
+        }
+
+        // 添加单词到 custom-words
+        async function addWordToCustomWords(wordData, pageContentId) {
+            try {
+                const payload = {
+                    word: (wordData.word || wordData.Word || '').toLowerCase(),
+                    us: wordData.us || '',
+                    uk: wordData.uk || '',
+                    translations: wordData.translations || [],
+                    phrases: wordData.phrases || [],
+                    sentences: wordData.sentences || [],
+                    source: `page-content://${pageContentId}`,
+                    captureDate: new Date().toISOString(),
+                    isCustom: true
+                };
+
+                const resp = await fetch(`${API_BASE}/custom-words`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                // 尝试解析返回的 upsertedId
+                const json = await resp.json().catch(() => null);
+                return (json && (json.upsertedId || (json.data && json.data._id))) || null;
+            } catch (err) {
+                console.error('添加生词失败:', err);
+                return null;
+            }
+        }
+
+        // 刷新当前页面的生词列表
+        async function refreshCurrentPageWords() {
+            if (!currentPageContentId) return;
+            try {
+                const response = await fetch(`${API_BASE}/page-contents/${currentPageContentId}/detail`);
+                const data = await response.json();
+                if (data.page) {
+                    currentWords = data.words || [];
+                    renderWordsSidebar(currentWords);
+                }
+            } catch (err) {
+                console.error('刷新生词列表失败:', err);
+            }
+        }
+
+        // 删除自定义生词（来自页面的小抄）
+        async function deleteCustomWord(id) {
+            if (!id) return;
+            if (!confirm('确定要从生词本中删除该单词吗？')) return;
+            try {
+                showGlobalLoading();
+                const resp = await fetch(`${API_BASE}/custom-words/${id}`, { method: 'DELETE' });
+                hideGlobalLoading();
+                if (!resp.ok) {
+                    const txt = await resp.text().catch(()=>'');
+                    alert('删除失败: ' + (txt || resp.statusText));
+                    return;
+                }
+                // 从当前列表中移除并刷新侧边栏
+                const el = document.getElementById(`word-item-${id}`);
+                if (el) {
+                    el.style.animation = 'slideOut 0.3s ease-out';
+                    setTimeout(() => { el.remove(); }, 300);
+                }
+                // 同步刷新整个侧边栏数据
+                await refreshCurrentPageWords();
+            } catch (err) {
+                hideGlobalLoading();
+                console.error('删除生词失败:', err);
+                alert('删除失败');
+            }
+        }
+
+        // 标记页面为已读
+        async function markAsRead(id) {
+            try {
+                const response = await fetch(`${API_BASE}/page-contents/${id}/mark-read`, {
+                    method: 'PUT'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 更新UI
+                    const pageItem = document.getElementById(`page-${id}`);
+                    if (pageItem) {
+                        pageItem.classList.add('read');
+                        // 刷新列表
+                        loadPages();
+                    }
+                } else {
+                    alert('标记失败');
+                }
+            } catch (err) {
+                console.error('标记已读失败:', err);
+                alert('标记失败');
+            }
+        }
+
+        // 删除页面内容
+        async function deletePageContent(id) {
+            if (!confirm('确定要删除这个页面内容吗？')) {
+                return;
+            }
+
+            try {
+                const response = await fetch(`${API_BASE}/page-contents/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await response.json();
+
+                if (data.success) {
+                    // 从列表移除
+                    const pageItem = document.getElementById(`page-${id}`);
+                    if (pageItem) {
+                        pageItem.style.animation = 'slideOut 0.3s ease-out';
+                        setTimeout(() => {
+                            pageItem.remove();
+                            // 检查是否还有页面
+                            const listEl = document.getElementById('pagesList');
+                            if (listEl.querySelectorAll('.page-item').length === 0) {
+                                loadPages();
+                            }
+                        }, 300);
+                    }
+                } else {
+                    alert('删除失败');
+                }
+            } catch (err) {
+                console.error('删除失败:', err);
+                alert('删除失败');
+            }
+        }
+
+        // 点击模态框外部关闭
+        window.onclick = function (event) {
+            const modal = document.getElementById('pageModal');
+            if (event.target === modal) {
+                closeModal();
+            }
+            const wModal = document.getElementById('wordModal');
+            if (event.target === wModal) {
+                closeWordModal();
+            }
+        }
+
+        // ESC键关闭：优先关闭单词弹窗，再关闭页面内容模态
+        document.addEventListener('keydown', function (event) {
+            if (event.key === 'Escape') {
+                const wModal = document.getElementById('wordModal');
+                if (wModal && wModal.style.display === 'block') {
+                    closeWordModal();
+                    return;
+                }
+
+                const pModal = document.getElementById('pageModal');
+                if (pModal && pModal.style.display === 'block') {
+                    closeModal();
+                }
+            }
+        });
+
+        // 格式化日期
+        function formatDate(dateStr) {
+            const date = new Date(dateStr);
+            return date.toLocaleString('zh-CN', {
+                year: 'numeric',
+                month: '2-digit',
+                day: '2-digit',
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // HTML转义
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // 调试与初始化
+        console.log('page-contents script loaded');
+        window.onerror = function (msg, src, line, col, err) {
+            console.error('Global error:', msg, 'at', src + ':' + line + ':' + col, err);
+        };
+
+        let currentPage = 1;
+        let totalPages = 1;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                const searchBtn = document.getElementById('searchBtn');
+                const searchInput = document.getElementById('searchInput');
+                if (searchBtn) searchBtn.addEventListener('click', () => loadPages(1));
+                if (searchInput) searchInput.addEventListener('keypress', (e) => { if (e.key === 'Enter') loadPages(1); });
+                console.log('Initializing page list load');
+                loadPages(1).catch(e => console.error('loadPages error:', e));
+            } catch (e) {
+                console.error('Initialization error:', e);
+            }
+        });
+
+        // 点击按钮：请求后端 /fetch-bbc-articles
+        async function loadPages(page = currentPage) {
+            try {
+                const q = encodeURIComponent(document.getElementById('searchInput').value || '');
+                const sortBy = document.getElementById('sortBy').value;
+                const order = document.getElementById('order').value;
+                const limit = parseInt(document.getElementById('limit').value, 10) || 10;
+
+                currentPage = page;
+                const resp = await fetch(`${API_BASE}/page-contents?page=${currentPage}&limit=${limit}&q=${q}&sortBy=${sortBy}&order=${order}`);
+                const data = await resp.json();
+
+                const listEl = document.getElementById('pagesList');
+
+                if (!data.pages || data.pages.length === 0) {
+                    listEl.innerHTML = `
+                        <div class="empty">
+                            <div class="empty-icon">📭</div>
+                            <div>没有匹配的页面内容</div>
+                        </div>
+                    `;
+                    renderPagination(0, limit);
+                    return;
+                }
+
+                listEl.innerHTML = data.pages.map(page => `
+                    <div class="page-item ${page.isRead ? 'read' : ''}" id="page-${page._id}">
+                        <div class="page-item-content" onclick="viewPage('${page._id}')">
+                            <div class="page-title">
+                                ${escapeHtml(page.title)}
+                                ${page.isRead ? '<span class="read-badge">✓ 已读</span>' : ''}
+                            </div>
+                            <a href="${escapeHtml(page.url)}" target="_blank" class="page-url" onclick="event.stopPropagation()">${escapeHtml(page.url)}</a>
+                            <div class="page-date">最近访问: ${formatDate(page.lastViewedAt || page.capturedAt)}</div>
+                        </div>
+                        <div class="page-item-actions" onclick="event.stopPropagation()">
+                            ${!page.isRead ? `<button class="page-item-btn mark-read-btn" onclick="markAsRead('${page._id}')">标记已读</button>` : ''}
+                            <button class="page-item-btn delete-btn" onclick="deletePageContent('${page._id}')">删除</button>
+                        </div>
+                        
+                    </div>
+                `).join('');
+
+                renderPagination(data.total || 0, data.limit || limit);
+            } catch (err) {
+                console.error('加载页面列表失败:', err);
+                document.getElementById('pagesList').innerHTML = `
+                    <div class="empty">
+                        <div>加载失败，请检查后端服务是否运行</div>
+                    </div>
+                `;
+            }
+        }
+
+        function renderPagination(total, limit) {
+            const bar = document.getElementById('paginationBar');
+            bar.innerHTML = '';
+            if (!total) return;
+            totalPages = Math.max(1, Math.ceil(total / limit));
+
+            const prev = document.createElement('button');
+            prev.className = 'back-btn';
+            prev.textContent = '上一页';
+            prev.disabled = currentPage <= 1;
+            prev.onclick = () => { if (currentPage > 1) loadPages(currentPage - 1); };
+
+            const next = document.createElement('button');
+            next.className = 'back-btn';
+            next.textContent = '下一页';
+            next.disabled = currentPage >= totalPages;
+            next.onclick = () => { if (currentPage < totalPages) loadPages(currentPage + 1); };
+
+            const info = document.createElement('div');
+            info.style.color = '#333';
+            info.textContent = `第 ${currentPage} / ${totalPages} 页 （共 ${total} 条）`;
+
+            bar.appendChild(info);
+            bar.appendChild(prev);
+            bar.appendChild(next);
+        }
+    </script>
+</body>
+
+</html>

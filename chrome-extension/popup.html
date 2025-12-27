@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英语生词本助手</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      width: 400px;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 500px;
+      color: #333;
+    }
+    
+    .popup-container {
+      display: flex;
+      flex-direction: column;
+      height: 100%;
+      padding: 16px;
+      gap: 16px;
+    }
+    
+    .header {
+      color: white;
+      text-align: center;
+      font-size: 16px;
+      font-weight: 600;
+      padding-bottom: 8px;
+      border-bottom: 2px solid rgba(255, 255, 255, 0.3);
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 8px;
+      background: white;
+      border-radius: 8px;
+      padding: 4px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+    }
+    
+    .tab-btn {
+      flex: 1;
+      padding: 8px 12px;
+      border: none;
+      background: transparent;
+      cursor: pointer;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      color: #666;
+      transition: all 0.3s ease;
+    }
+    
+    .tab-btn.active {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .tab-content {
+      flex: 1;
+      overflow-y: auto;
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+      display: none;
+    }
+    
+    .tab-content.active {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    /* 捕获词汇标签页 */
+    .capture-section {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+    
+    .word-display {
+      background: #f5f5f5;
+      padding: 16px;
+      border-radius: 6px;
+      text-align: center;
+    }
+    
+    .word-display .label {
+      font-size: 12px;
+      color: #999;
+      margin-bottom: 4px;
+    }
+    
+    .word-display .word {
+      font-size: 32px;
+      font-weight: bold;
+      color: #667eea;
+      margin-bottom: 8px;
+    }
+    
+    .word-display .sentence {
+      font-size: 13px;
+      color: #666;
+      line-height: 1.6;
+      font-style: italic;
+      max-height: 80px;
+      overflow-y: auto;
+      border-top: 1px solid #ddd;
+      padding-top: 8px;
+    }
+    
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+    
+    .form-group label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .form-group input,
+    .form-group textarea {
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+      font-family: inherit;
+      resize: none;
+    }
+    
+    .form-group textarea {
+      min-height: 60px;
+      max-height: 100px;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus {
+      outline: none;
+      border-color: #667eea;
+      box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+    
+    .definitions-section {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .definitions-label {
+      font-size: 12px;
+      font-weight: 600;
+      color: #666;
+    }
+    
+    .definition-input {
+      display: flex;
+      gap: 6px;
+      align-items: flex-start;
+    }
+    
+    .definition-input input {
+      flex: 1;
+      padding: 8px 12px;
+      border: 1px solid #ddd;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    
+    .definition-input button {
+      padding: 8px 12px;
+      background: #f0f0f0;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      font-size: 12px;
+      color: #666;
+      transition: all 0.2s;
+    }
+    
+    .definition-input button:hover {
+      background: #e0e0e0;
+    }
+    
+    .definition-item {
+      background: #f9f9f9;
+      padding: 8px 12px;
+      border-radius: 4px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 13px;
+      color: #666;
+    }
+    
+    .definition-item .delete-btn {
+      color: #999;
+      cursor: pointer;
+      padding: 0 4px;
+      transition: color 0.2s;
+    }
+    
+    .definition-item .delete-btn:hover {
+      color: #e74c3c;
+    }
+    
+    .button-group {
+      display: flex;
+      gap: 8px;
+      margin-top: 8px;
+    }
+    
+    .button-group button {
+      flex: 1;
+      padding: 10px 16px;
+      border: none;
+      border-radius: 6px;
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.3s ease;
+    }
+    
+    .btn-save {
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      color: white;
+    }
+    
+    .btn-save:hover {
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .btn-clear {
+      background: #f0f0f0;
+      color: #666;
+    }
+    
+    .btn-clear:hover {
+      background: #e0e0e0;
+    }
+    
+    /* 词汇库标签页 */
+    .words-list {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+    
+    .word-item {
+      background: #f9f9f9;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      padding: 12px;
+      transition: all 0.2s ease;
+    }
+    
+    .word-item:hover {
+      border-color: #667eea;
+      box-shadow: 0 2px 8px rgba(102, 126, 234, 0.1);
+    }
+    
+    .word-item-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+    }
+    
+    .word-item-word {
+      font-size: 16px;
+      font-weight: 600;
+      color: #667eea;
+    }
+    
+    .word-item-date {
+      font-size: 11px;
+      color: #999;
+    }
+    
+    .word-item-delete {
+      background: none;
+      border: none;
+      color: #ccc;
+      cursor: pointer;
+      font-size: 16px;
+      transition: color 0.2s;
+    }
+    
+    .word-item-delete:hover {
+      color: #e74c3c;
+    }
+    
+    .word-item-sentence {
+      font-size: 12px;
+      color: #666;
+      line-height: 1.5;
+      margin-bottom: 6px;
+      font-style: italic;
+    }
+    
+    .word-item-definitions {
+      font-size: 12px;
+      color: #777;
+      line-height: 1.4;
+    }
+    
+    .word-item-definitions strong {
+      color: #666;
+      font-weight: 600;
+    }
+    
+    .empty-state {
+      text-align: center;
+      padding: 32px 16px;
+      color: #999;
+    }
+    
+    .empty-state-icon {
+      font-size: 40px;
+      margin-bottom: 8px;
+    }
+    
+    .empty-state-text {
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    
+    .loading {
+      text-align: center;
+      color: #999;
+      padding: 16px;
+    }
+    
+    .status-message {
+      padding: 10px 12px;
+      border-radius: 4px;
+      font-size: 13px;
+      text-align: center;
+      margin-bottom: 8px;
+      display: none;
+    }
+    
+    .status-message.success {
+      display: block;
+      background: #d4edda;
+      color: #155724;
+      border: 1px solid #c3e6cb;
+    }
+    
+    .status-message.error {
+      display: block;
+      background: #f8d7da;
+      color: #721c24;
+      border: 1px solid #f5c6cb;
+    }
+    
+    .status-message.info {
+      display: block;
+      background: #d1ecf1;
+      color: #0c5460;
+      border: 1px solid #bee5eb;
+    }
+  </style>
+</head>
+<body>
+  <div class="popup-container">
+    <div class="header">📚 英语生词本助手</div>
+    
+    <div class="tabs">
+      <button class="tab-btn active" data-tab="capture">捕获词汇</button>
+      <button class="tab-btn" data-tab="library">我的词库</button>
+    </div>
+    
+    <!-- 捕获词汇标签页 -->
+    <div class="tab-content active" id="capture-tab">
+      <div class="status-message" id="capture-status"></div>
+      
+      <div class="capture-section">
+        <div class="word-display" id="word-display">
+          <div class="label">划词保存</div>
+          <div class="word">-</div>
+          <div class="sentence">在网页上划选英文单词...</div>
+        </div>
+        
+        <div class="form-group">
+          <label>单词</label>
+          <input type="text" id="input-word" placeholder="自动填充或手动输入">
+        </div>
+        
+        <div class="form-group">
+          <label>句子</label>
+          <textarea id="input-sentence" placeholder="单词所在的句子..."></textarea>
+        </div>
+        
+        <div class="definitions-section">
+          <div class="definitions-label">释义</div>
+          <div class="definition-input">
+            <input type="text" id="new-definition" placeholder="输入释义...">
+            <button id="add-definition-btn">添加</button>
+          </div>
+          <div id="definitions-list"></div>
+        </div>
+        
+        <div class="button-group">
+          <button class="btn-save" id="save-word-btn">💾 保存</button>
+          <button class="btn-clear" id="clear-btn">清除</button>
+        </div>
+      </div>
+    </div>
+    
+    <!-- 词汇库标签页 -->
+    <div class="tab-content" id="library-tab">
+      <div class="status-message" id="library-status"></div>
+      <div id="words-container" class="words-list">
+        <div class="loading">加载中...</div>
+      </div>
+    </div>
+  </div>
+  
+  <script src="src/popup.js"></script>
+</body>
+</html>

@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>全局搜索 - 英语词汇</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.25);
+    }
+    header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 20px; }
+    .back-btn { display: inline-flex; align-items: center; gap: 6px; padding: 8px 14px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; border: none; border-radius: 8px; text-decoration: none; font-weight: 600; cursor: pointer; }
+    .back-btn:hover { transform: translateY(-2px); }
+    h1 { font-size: 28px; color: #102a43; }
+
+    .search-panel { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
+    .search-input { flex: 1; min-width: 240px; padding: 12px 14px; border: 2px solid #e0e7ef; border-radius: 10px; font-size: 15px; }
+    .search-input:focus { outline: none; border-color: #667eea; }
+    .search-btn { padding: 12px 18px; background: linear-gradient(135deg, #3b82f6 0%, #2563eb 100%); color: white; border: none; border-radius: 10px; font-weight: 700; cursor: pointer; }
+    .search-btn:hover { transform: translateY(-1px); }
+
+    .summary { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; color: #52606d; font-size: 14px; flex-wrap: wrap; }
+    .chip { display: inline-flex; align-items: center; gap: 6px; padding: 6px 10px; background: #f6f8fb; border: 1px solid #e0e7ef; border-radius: 999px; }
+
+    .results { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 14px; }
+    .card { border: 2px solid #e0e7ef; border-radius: 12px; padding: 16px; background: white; box-shadow: 0 6px 18px rgba(0,0,0,0.06); display: flex; flex-direction: column; gap: 10px; }
+    .card-header { display: flex; align-items: center; gap: 8px; }
+    .word { font-size: 22px; font-weight: 800; color: #102a43; }
+    .phonetic { font-size: 12px; color: #829ab1; }
+    .translation { font-size: 14px; color: #243b53; line-height: 1.6; }
+    .meta { font-size: 12px; color: #829ab1; display: flex; gap: 10px; flex-wrap: wrap; }
+    .actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn { padding: 8px 12px; border: none; border-radius: 8px; font-size: 13px; font-weight: 700; cursor: pointer; }
+    .btn-primary { background: linear-gradient(135deg, #10b981 0%, #059669 100%); color: white; }
+    .btn-ghost { background: #f6f8fb; color: #334e68; border: 1px solid #e0e7ef; }
+    .btn-primary.added { background: linear-gradient(135deg, #6b7280 0%, #4b5563 100%); cursor: default; }
+
+    .placeholder { text-align: center; color: #829ab1; padding: 40px 20px; font-size: 16px; }
+    .loading { text-align: center; color: #52606d; padding: 40px; font-size: 16px; }
+    .error { text-align: center; color: #e11d48; padding: 40px; font-size: 16px; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <a class="back-btn" href="index.html">← 返回</a>
+      <h1>🔍 全局搜索</h1>
+    </header>
+
+    <div class="search-panel">
+      <input id="searchInput" class="search-input" placeholder="输入单词或片段，按回车搜索" />
+      <button class="search-btn" id="searchBtn">搜索</button>
+    </div>
+
+    <div class="summary" id="summary" style="display:none;"></div>
+
+    <div id="results"></div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000';
+    const PAGE_LIMIT = 50;
+    let currentQuery = '';
+    let loading = false;
+
+    function setSummary(text, count) {
+      const summary = document.getElementById('summary');
+      if (!text) {
+        summary.style.display = 'none';
+        summary.innerHTML = '';
+        return;
+      }
+      summary.style.display = 'flex';
+      summary.innerHTML = `
+        <span class="chip">关键词：${escapeHtml(text)}</span>
+        <span class="chip">结果数：${count}</span>
+      `;
+    }
+
+    async function searchWords() {
+      const input = document.getElementById('searchInput');
+      const query = (input.value || '').trim();
+      currentQuery = query;
+
+      if (!query) {
+        setSummary('', 0);
+        document.getElementById('results').innerHTML = '<div class="placeholder">请输入要搜索的单词</div>';
+        return;
+      }
+
+      if (loading) return;
+      loading = true;
+      document.getElementById('results').innerHTML = '<div class="loading">搜索中...</div>';
+
+      try {
+        const body = {
+          tags: [],
+          skip: 0,
+          limit: PAGE_LIMIT,
+          search: query,
+          sort: null,
+          hideMastered: false
+        };
+
+        const res = await fetch(`${API_BASE}/vocabulary`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(body)
+        });
+
+        const result = await res.json();
+        const data = Array.isArray(result.data) ? result.data : [];
+        renderResults(data);
+        setSummary(query, data.length);
+      } catch (err) {
+        console.error('搜索失败', err);
+        document.getElementById('results').innerHTML = '<div class="error">❌ 搜索失败，请稍后重试</div>';
+      } finally {
+        loading = false;
+      }
+    }
+
+    function renderResults(list) {
+      const container = document.getElementById('results');
+      if (!list.length) {
+        container.innerHTML = '<div class="placeholder">未找到结果</div>';
+        return;
+      }
+
+      const html = list.map(item => {
+        const translations = Array.isArray(item.translations)
+          ? item.translations.map(t => typeof t === 'string' ? t : `${t.type ? `[${t.type}] ` : ''}${t.translation || ''}`)
+              .filter(Boolean).join('<br>')
+          : '';
+        const tags = Array.isArray(item.tags) ? item.tags.join(', ') : '';
+        const views = item.viewCount || item.views || 0;
+        const fetchCount = item.fetchCount || 0;
+        const us = item.us ? `🇺🇸 ${escapeHtml(item.us)}` : '';
+        const uk = item.uk ? `🇬🇧 ${escapeHtml(item.uk)}` : '';
+
+        return `
+          <div class="card">
+            <div class="card-header">
+              <span class="word">${escapeHtml(item.word)}</span>
+              <button class="btn btn-ghost" onclick="speak('${escapeHtml(item.word)}')">🔊</button>
+            </div>
+            <div class="phonetic">${us} ${uk}</div>
+            <div class="translation">${translations || '暂无释义'}</div>
+            <div class="meta">${views ? `👁 ${views}` : ''} ${fetchCount ? `📋 ${fetchCount}` : ''} ${tags ? `🏷 ${escapeHtml(tags)}` : ''}</div>
+            <div class="actions">
+              <button class="btn btn-primary" onclick="addToVocabulary(event, '${escapeHtml(item.word)}')">📚 加入生词本</button>
+              <button class="btn btn-ghost" onclick="viewDetail('${escapeHtml(item.word)}')">详情</button>
+            </div>
+          </div>
+        `;
+      }).join('');
+
+      container.innerHTML = `<div class="results">${html}</div>`;
+    }
+
+    async function viewDetail(word) {
+      try {
+        const res = await fetch(`${API_BASE}/search-word?word=${encodeURIComponent(word)}`);
+        const result = await res.json();
+        if (!result.found) {
+          alert('未找到该单词');
+          return;
+        }
+        const data = result.data;
+        const translations = Array.isArray(data.translations)
+          ? data.translations.map(t => typeof t === 'string' ? t : `${t.type ? `[${t.type}] ` : ''}${t.translation || ''}`)
+              .filter(Boolean).join('\n')
+          : '';
+        const sentences = Array.isArray(data.sentences) ? data.sentences.slice(0, 3) : [];
+        const sentenceText = sentences.map(s => `EN: ${s.sentence}\nCN: ${s.translation}`).join('\n\n');
+        const message = [
+          `单词：${data.word}`,
+          data.us ? `美音：${data.us}` : '',
+          data.uk ? `英音：${data.uk}` : '',
+          translations ? `释义：\n${translations}` : '',
+          sentenceText ? `例句：\n${sentenceText}` : ''
+        ].filter(Boolean).join('\n\n');
+        alert(message || '暂无详情');
+      } catch (err) {
+        console.error('查看详情失败', err);
+        alert('加载详情失败');
+      }
+    }
+
+    async function addToVocabulary(e, word) {
+      const btn = e.target;
+      if (btn.classList.contains('added')) return;
+      try {
+        const res = await fetch(`${API_BASE}/search-word?word=${encodeURIComponent(word)}`);
+        const result = await res.json();
+        if (!result.found) {
+          alert('未找到该单词');
+          return;
+        }
+        const data = result.data;
+        const addRes = await fetch(`${API_BASE}/custom-words`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            word: data.word,
+            us: data.us,
+            uk: data.uk,
+            translations: data.translations,
+            sentences: data.sentences || [],
+            phrases: data.phrases || [],
+            source: 'global-search',
+            captureDate: new Date().toISOString(),
+            isCustom: true
+          })
+        });
+        const addResult = await addRes.json();
+        if (addResult.ok) {
+          btn.classList.add('added');
+          btn.textContent = '✓ 已加入';
+          setTimeout(() => {
+            btn.classList.remove('added');
+            btn.textContent = '📚 加入生词本';
+          }, 2000);
+        } else {
+          alert('添加失败：' + (addResult.error || '未知错误'));
+        }
+      } catch (err) {
+        console.error('添加失败', err);
+        alert('添加失败，请重试');
+      }
+    }
+
+    function escapeHtml(text) {
+      if (!text) return '';
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return text.replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function speak(text) {
+      if (!text || !('speechSynthesis' in window)) return;
+      const utter = new SpeechSynthesisUtterance(text);
+      utter.lang = 'en-US';
+      utter.rate = 0.9;
+      window.speechSynthesis.cancel();
+      window.speechSynthesis.speak(utter);
+    }
+
+    // 防抖函数
+    function debounce(func, delay = 300) {
+      let timeoutId;
+      return function(...args) {
+        clearTimeout(timeoutId);
+        timeoutId = setTimeout(() => func.apply(this, args), delay);
+      };
+    }
+
+    const debouncedSearch = debounce(() => {
+      searchWords();
+    }, 300);
+
+    document.getElementById('searchBtn').addEventListener('click', searchWords);
+    document.getElementById('searchInput').addEventListener('input', debouncedSearch);
+    document.getElementById('searchInput').addEventListener('keydown', (e) => {
+      if (e.key === 'Enter') searchWords();
+    });
+
+    // 初始提示
+    document.getElementById('results').innerHTML = '<div class="placeholder">请输入要搜索的单词</div>';
+  </script>
+</body>
+</html>

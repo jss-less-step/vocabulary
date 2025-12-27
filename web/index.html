@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>英语词汇学习 - 首页</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Helvetica, Arial, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      color: white;
+      margin-bottom: 40px;
+      margin-top: 20px;
+    }
+
+    h1 {
+      font-size: 48px;
+      margin-bottom: 10px;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    }
+
+    .subtitle {
+      font-size: 18px;
+      opacity: 0.9;
+    }
+
+    .header-actions {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      margin-top: 20px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      padding: 10px 20px;
+      background: rgba(255, 255, 255, 0.2);
+      color: white;
+      border: 2px solid white;
+      border-radius: 8px;
+      text-decoration: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+    }
+
+    .btn:hover {
+      background: rgba(255, 255, 255, 0.3);
+      transform: translateY(-2px);
+    }
+
+    .categories-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 20px;
+      margin-top: 30px;
+    }
+
+    .category-card {
+      background: white;
+      border-radius: 16px;
+      padding: 24px;
+      cursor: pointer;
+      transition: all 0.3s ease;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      text-decoration: none;
+      color: inherit;
+    }
+
+    .category-card:hover {
+      transform: translateY(-4px);
+      box-shadow: 0 8px 24px rgba(0, 0, 0, 0.2);
+    }
+
+    .category-icon {
+      font-size: 40px;
+      margin-bottom: 12px;
+    }
+
+    .category-name {
+      font-size: 20px;
+      font-weight: 700;
+      color: #102a43;
+      margin-bottom: 8px;
+    }
+
+    .category-count {
+      font-size: 14px;
+      color: #52606d;
+    }
+
+    .progress-bar {
+      width: 100%;
+      height: 8px;
+      background: #e0e7ef;
+      border-radius: 4px;
+      margin-top: 12px;
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #667eea 0%, #764ba2 100%);
+      border-radius: 4px;
+      transition: width 0.3s;
+    }
+
+    .loading {
+      text-align: center;
+      color: white;
+      font-size: 18px;
+      padding: 40px;
+    }
+
+    .error {
+      text-align: center;
+      color: #ff6b6b;
+      font-size: 16px;
+      padding: 40px;
+      background: rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      margin-top: 20px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>📚 英语词汇学习</h1>
+      <p class="subtitle">让英语学习变得更简单</p>
+      <div class="header-actions">
+        <a href="custom-words.html" class="btn">📖 我的单词本</a>
+        <a href="stats.html" class="btn">📊 学习统计</a>
+        <a href="search.html" class="btn">📈 查询</a>
+        <a href="page-contents.html" class="btn">📄 文章阅读</a>
+      </div>
+    </header>
+
+    <div id="content">
+      <div class="loading">加载分类中...</div>
+    </div>
+  </div>
+
+  <script>
+    const API_BASE = 'http://localhost:3000';
+
+    async function loadCategories() {
+      try {
+        // 获取所有标签
+        const tagsRes = await fetch(`${API_BASE}/tags`);
+        const { tags } = await tagsRes.json();
+
+        // 获取掌握统计
+        const statsRes = await fetch(`${API_BASE}/mastered-stats`);
+        const statsArray = await statsRes.json();
+
+        // 构建统计映射
+        const statsMap = {};
+        statsArray.forEach(stat => {
+          statsMap[stat.tag] = stat;
+        });
+
+        // 渲染分类卡片
+        const content = document.getElementById('content');
+        const html = tags.map(tag => {
+          const stats = statsMap[tag] || { total: 0, mastered: 0, progress: 0 };
+          const icon = getTagIcon(tag);
+          return `
+            <a href="category.html?tag=${encodeURIComponent(tag)}" class="category-card">
+              <div class="category-icon">${icon}</div>
+              <div class="category-name">${tag}</div>
+              <div class="category-count">共 ${stats.total} 个单词 • 已掌握 ${stats.mastered} 个</div>
+              <div class="progress-bar">
+                <div class="progress-fill" style="width: ${stats.progress}%"></div>
+              </div>
+            </a>
+          `;
+        }).join('');
+
+        content.innerHTML = `<div class="categories-grid">${html}</div>`;
+      } catch (error) {
+        console.error('加载分类失败:', error);
+        document.getElementById('content').innerHTML = `
+          <div class="error">
+            ❌ 加载失败: ${error.message}<br>
+            <small>请确保后端服务已启动</small>
+          </div>
+        `;
+      }
+    }
+
+    function getTagIcon(tag) {
+      const iconMap = {
+        'CET4': '4️⃣',
+        'CET6': '6️⃣',
+        'GMAT': '📈',
+        'GRE': '🎯',
+        'TOEFL': '🌍',
+        'IELTS': '🏴󠁧󠁢󠁳󠁣󠁴󠁿',
+        'SAT': '🎓',
+        'KaoYan': '🎓',
+        'Level4': '⭐',
+        'Level8': '⭐⭐',
+        'BEC': '💼',
+        'ChuZhong': '📖',
+        'GaoZhong': '📕',
+        'PEPXiaoXue': '🔤'
+      };
+      return iconMap[tag] || '📚';
+    }
+
+    // 页面加载时获取分类
+    loadCategories();
+  </script>
+</body>
+</html>

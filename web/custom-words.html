@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>生词本</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            margin: 0;
+            padding: 0;
+            background-color: #f3f6fb;
+            color: #222;
+        }
+        .container {
+            max-width: 900px;
+            margin: 48px auto;
+            padding: 24px;
+            background: #fff;
+            border-radius: 10px;
+            box-shadow: 0 8px 20px rgba(20, 35, 50, 0.06);
+        }
+        h1 {
+            margin: 0;
+            font-size: 20px;
+            color: #111;
+        }
+        .page-header {
+            display:flex;
+            align-items:center;
+            justify-content:space-between;
+            gap:12px;
+            margin-bottom:12px;
+        }
+        .page-header h1 { margin: 0; }
+        .page-header .btn-small { padding: 8px 12px; }
+        .page-header .btn-small:hover { background: #f1f6ff; }
+        
+        .controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 18px;
+        }
+        .search-group {
+            display: flex;
+            gap: 6px;
+            flex: 1 1 320px;
+        }
+        .search-group input[type="text"] {
+            flex: 1;
+            padding: 10px 12px;
+            border: 1px solid #d7dfea;
+            border-radius: 6px;
+            box-shadow: inset 0 1px 0 rgba(255,255,255,0.5);
+            font-size: 14px;
+        }
+        .search-group button {
+            padding: 10px 12px;
+            border-radius: 6px;
+            border: 1px solid #5b8df9;
+            background: linear-gradient(180deg,#5b8df9,#3f6ee6);
+            color: #fff;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        select, .controls label {
+            padding: 8px 10px;
+            border-radius: 6px;
+            border: 1px solid #d7dfea;
+            background: #fff;
+            font-size: 14px;
+        }
+        .word-list {
+            list-style: none;
+            padding: 0;
+            margin: 0;
+            border: 1px solid #eef2f8;
+            border-radius: 8px;
+            overflow: hidden;
+        }
+        .word-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px;
+            background: #fff;
+            transition: background-color 0.15s;
+        }
+        .word-item + .word-item {
+            border-top: 1px solid #f2f4f8;
+        }
+        .word-item:hover {
+            background-color: #fbfdff;
+        }
+        .word-left {
+            display: flex;
+            flex-direction: column;
+        }
+        .word-main {
+            font-weight: 600;
+            font-size: 16px;
+            color: #0b2540;
+        }
+        .word-sub {
+            font-size: 13px;
+            color: #5c6b77;
+            margin-top: 4px;
+        }
+        .word-actions {
+            display: flex;
+            gap: 8px;
+            align-items: center;
+        }
+        .btn-small {
+            padding: 6px 10px;
+            border-radius: 6px;
+            border: 1px solid #dbe7ff;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .btn-primary {
+            background: linear-gradient(180deg,#5b8df9,#3f6ee6);
+            color: #fff;
+            border: none;
+        }
+        .tag {
+            font-size: 12px;
+            color: #fff;
+            background: #28a745;
+            padding: 4px 8px;
+            border-radius: 999px;
+        }
+        .word-item.mastered {
+            opacity: 0.6;
+        }
+        .status-message {
+            padding: 10px 12px;
+            margin-bottom: 10px;
+            border-radius: 6px;
+            background: #fff9e6;
+            color: #6a4e00;
+            border: 1px solid #fae7b8;
+            display: none;
+        }
+        .page-info {
+            text-align: center;
+            color: #5c6b77;
+            margin-top: 12px;
+            font-size: 13px;
+        }
+        .pagination {
+            display: flex;
+            justify-content: center;
+            gap: 8px;
+            margin-top: 16px;
+            flex-wrap: wrap;
+        }
+        .pagination button {
+            margin: 0;
+            padding: 8px 10px;
+            border: 1px solid #e6eefc;
+            border-radius: 6px;
+            background: #fff;
+            cursor: pointer;
+            font-size: 13px;
+        }
+        .pagination button.current {
+            background: #eaf1ff;
+            border-color: #cfe0ff;
+            color: #2b5bd7;
+        }
+        .pagination button:disabled {
+            background-color: #f3f5f7;
+            color: #9aa6b2;
+            cursor: not-allowed;
+        }
+        .spinner {
+            border: 3px solid rgba(0,0,0,0.06);
+            border-top: 3px solid #5b8df9;
+            border-radius: 50%;
+            width: 18px;
+            height: 18px;
+            animation: spin 1s linear infinite;
+            display: inline-block;
+            vertical-align: middle;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* 单词详情模态框 */
+        .modal-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.45); display: none; align-items: center; justify-content: center; z-index: 9999; }
+        .modal { width: 560px; max-width: 92%; background: #fff; border-radius: 10px; padding: 18px; box-shadow: 0 10px 30px rgba(10,20,40,0.2); }
+        .modal .modal-header { display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+        .modal .modal-title { font-weight:700; font-size:18px; }
+        .modal .modal-body { font-size:14px; color:#333; max-height:60vh; overflow:auto; }
+        .modal .modal-footer { display:flex; gap:8px; justify-content:flex-end; margin-top:12px; }
+        .modal .close-btn { background: transparent; border: none; font-size:18px; cursor:pointer; }
+        .reaction-menu { display:flex; gap:6px; }
+        .reaction-menu button { padding:6px 8px; border-radius:6px; border:1px solid #e6eefc; background:#fff; cursor:pointer; }
+
+        @media (max-width: 600px) {
+            .controls { flex-direction: column; align-items: stretch; }
+            .search-group { width: 100%; }
+            .word-actions { gap: 6px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="page-header">
+            <h1>生词本</h1>
+            <button id="homeBtn" class="btn-small">返回主页</button>
+        </div>
+        <div class="controls">
+            <div class="search-group">
+                <input type="text" id="search" placeholder="搜索单词...">
+                <button id="applyFilters">搜索</button>
+                <button id="clearSearch" class="btn-small">清空</button>
+            </div>
+            <select id="sort">
+                <option value="date-desc">按添加时间（最新）</option>
+                <option value="date-asc">按添加时间（最旧）</option>
+                <option value="alpha-asc">字母升序</option>
+                <option value="alpha-desc">字母降序</option>
+            </select>
+            <label title="隐藏已标记为已掌握的单词">
+                <input type="checkbox" id="hideMastered"> 隐藏已掌握
+            </label>
+            <div id="statusMessage" class="status-message" style="display:none;"></div>
+        </div>
+        <ul class="word-list" id="wordList"></ul>
+        <div class="page-info" id="pageInfo"></div>
+        <div class="pagination" id="pagination"></div>
+
+        <!-- 单词详情模态框 -->
+        <div id="wordModal" class="modal-overlay" aria-hidden="true">
+            <div class="modal" role="dialog" aria-modal="true">
+                <div class="modal-header">
+                    <div style="display:flex;gap:8px;align-items:center;">
+                        <div class="modal-title" id="modalWord">单词</div>
+                        <button id="modalPronounce" class="btn-small" title="发音">🔊</button>
+                    </div>
+                    <button class="close-btn" id="modalClose">×</button>
+                </div>
+                <div class="modal-body">
+                    <div id="modalTrans" class="modal-trans"></div>
+                    <div id="modalSentences" class="modal-sentences" style="margin-top:8px;"></div>
+                    <div style="margin-top:8px;color:#6b7785;font-size:13px;">来源: <span id="modalSource"></span> 创建: <span id="modalDate"></span></div>
+                </div>
+                <div class="modal-footer">
+                    <button class="btn-small" id="modalMasterBtn">标记为已掌握</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const apiUrl = 'http://localhost:3000/custom-words';
+        let currentPage = 1;
+        let currentQuery = '';
+        let currentSort = 'date-desc';
+        let hideMastered = false;
+        let lastTotal = 0;
+
+        const pageSize = 12;
+
+        const statusMessageEl = document.getElementById('statusMessage');
+        const pageInfoEl = document.getElementById('pageInfo');
+
+        function showStatus(msg) {
+            if (!statusMessageEl) return;
+            statusMessageEl.style.display = 'block';
+            statusMessageEl.textContent = msg;
+        }
+        function hideStatus() {
+            if (!statusMessageEl) return;
+            statusMessageEl.style.display = 'none';
+            statusMessageEl.textContent = '';
+        }
+
+        async function fetchWords(page = 1) {
+            showStatus('加载中...');
+            try {
+                const params = new URLSearchParams({
+                    page,
+                    limit: pageSize,
+                    query: currentQuery,
+                    sort: currentSort,
+                    hideMastered: hideMastered ? '1' : '0'
+                });
+
+                const response = await fetch(`${apiUrl}?${params.toString()}`);
+                if (!response.ok) {
+                    const errText = await response.text().catch(()=>response.statusText);
+                    throw new Error(errText || '接口返回错误');
+                }
+
+                const data = await response.json();
+                hideStatus();
+                lastTotal = data.total || 0;
+                return { items: data.items || [], total: data.total || 0 };
+            } catch (err) {
+                showStatus('加载失败：' + (err.message || err));
+                return { items: [], total: 0 };
+            }
+        }
+
+        function formatDate(iso) {
+            if (!iso) return '';
+            const d = new Date(iso);
+            return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,'0')}-${String(d.getDate()).padStart(2,'0')}`;
+        }
+
+        function renderWords(items) {
+            const wordList = document.getElementById('wordList');
+            wordList.innerHTML = '';
+
+            if (!items || items.length === 0) {
+                const empty = document.createElement('li');
+                empty.className = 'word-item';
+                empty.innerHTML = '<div class="word-left"><div class="word-main">没有找到生词</div><div class="word-sub">尝试更改搜索条件或清空筛选。</div></div>';
+                wordList.appendChild(empty);
+                return;
+            }
+
+            items.forEach(item => {
+                const id = item._id || item.id || '';
+                window._cvItems = window._cvItems || {};
+                window._cvItems[id] = item;
+
+                const li = document.createElement('li');
+                li.className = 'word-item' + (item.mastered ? ' mastered' : '');
+                li.setAttribute('data-id', id);
+
+                const leftHtml = `
+                    <div class="word-left" onclick="openDetails('${id}')">
+                        <div class="word-main">${item.word || ''}</div>
+                        <div class="word-sub">${(item.translations && item.translations[0] && item.translations[0].translation) || (item.sentence && item.sentence.sentence) || ''}</div>
+                    </div>
+                `;
+
+                const actionBtn = item.mastered ? `<span class="tag">已掌握</span>` : `<button class="btn-small btn-primary" data-id="${id}" onclick="event.stopPropagation(); markMastered('${id}')">标记为已掌握</button>`;
+                const rightHtml = `
+                    <div class="word-actions">
+                        ${actionBtn}
+                    </div>
+                `;
+
+                li.innerHTML = leftHtml + rightHtml;
+                wordList.appendChild(li);
+            });
+        }
+
+        function renderPagination(total) {
+            const totalPages = Math.max(1, Math.ceil(total / pageSize));
+            const pagination = document.getElementById('pagination');
+            pagination.innerHTML = '';
+
+            const prev = document.createElement('button');
+            prev.textContent = '上一页';
+            prev.disabled = currentPage <= 1;
+            prev.addEventListener('click', () => { currentPage = Math.max(1, currentPage-1); loadWords(); });
+            pagination.appendChild(prev);
+
+            // show a window of pages around current
+            const start = Math.max(1, currentPage - 3);
+            const end = Math.min(totalPages, currentPage + 3);
+            for (let i = start; i <= end; i++) {
+                const btn = document.createElement('button');
+                btn.textContent = i;
+                if (i === currentPage) btn.classList.add('current');
+                btn.disabled = i === currentPage;
+                btn.addEventListener('click', () => { currentPage = i; loadWords(); });
+                pagination.appendChild(btn);
+            }
+
+            const next = document.createElement('button');
+            next.textContent = '下一页';
+            next.disabled = currentPage >= totalPages;
+            next.addEventListener('click', () => { currentPage = Math.min(totalPages, currentPage+1); loadWords(); });
+            pagination.appendChild(next);
+
+            pageInfoEl.textContent = `第 ${currentPage} / ${totalPages} 页，共 ${total} 条`;
+        }
+
+        async function loadWords() {
+            const data = await fetchWords(currentPage);
+            renderWords(data.items);
+            renderPagination(data.total);
+        }
+
+        // mark as mastered: call DELETE /custom-words/:id then refresh list
+        async function markMastered(id) {
+            if (!id) return false;
+            try {
+                showStatus('正在标记为已掌握...');
+                const resp = await fetch(`${apiUrl}/${id}`, { method: 'DELETE' });
+                if (!resp.ok) {
+                    const txt = await resp.text().catch(()=>'');
+                    showStatus('操作失败：' + (txt || resp.statusText));
+                    setTimeout(hideStatus, 2000);
+                    return false;
+                }
+
+                // 成功后重新加载当前页数据
+                showStatus('已标记为已掌握，正在刷新...');
+                await loadWords();
+                setTimeout(hideStatus, 1200);
+                // 如果弹窗打开，关闭它
+                closeModal();
+                return true;
+            } catch (err) {
+                showStatus('操作失败：' + (err.message || err));
+                setTimeout(hideStatus, 2000);
+                return false;
+            }
+        }
+
+        // 弹窗相关
+        function openDetails(id) {
+            if (!id || !window._cvItems || !window._cvItems[id]) return;
+            const item = window._cvItems[id];
+            const modal = document.getElementById('wordModal');
+            document.getElementById('modalWord').textContent = item.word || '';
+            document.getElementById('modalTrans').innerHTML = (item.translations && item.translations.length) ? `<strong>释义：</strong> ${item.translations.map(t=>t.translation).join('； ')}` : '';
+            const sentencesEl = document.getElementById('modalSentences');
+            sentencesEl.innerHTML = '';
+            if (item.sentences && item.sentences.length) {
+                const ul = document.createElement('ul');
+                item.sentences.forEach(s => {
+                    const li = document.createElement('li');
+                    li.textContent = s.sentence + (s.translation ? ' — ' + s.translation : '');
+                    ul.appendChild(li);
+                });
+                sentencesEl.appendChild(ul);
+            } else if (item.sentence && item.sentence.sentence) {
+                sentencesEl.textContent = item.sentence.sentence;
+            }
+            document.getElementById('modalSource').textContent = item.source || '';
+            document.getElementById('modalDate').textContent = item.captureDate ? formatDate(item.captureDate) : (item.createdAt ? formatDate(item.createdAt) : '');
+            const masterBtn = document.getElementById('modalMasterBtn');
+            if (item.mastered) {
+                masterBtn.textContent = '已掌握';
+                masterBtn.disabled = true;
+            } else {
+                masterBtn.textContent = '标记为已掌握';
+                masterBtn.disabled = false;
+                masterBtn.onclick = async function(e){
+                    e.stopPropagation();
+                    masterBtn.disabled = true;
+                    masterBtn.textContent = '处理中...';
+                    const ok = await markMastered(id);
+                    if (ok) {
+                        masterBtn.textContent = '已掌握';
+                    } else {
+                        masterBtn.textContent = '标记为已掌握';
+                        masterBtn.disabled = false;
+                    }
+                };
+            }
+            const pronBtn = document.getElementById('modalPronounce');
+            if (pronBtn) {
+                pronBtn.onclick = function(e){ e.stopPropagation(); pronounceWord(item.word || ''); };
+            }
+            modal.style.display = 'flex';
+            modal.setAttribute('aria-hidden','false');
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('wordModal');
+            if (modal) {
+                modal.style.display = 'none';
+                modal.setAttribute('aria-hidden','true');
+            }
+        }
+
+        function pronounceWord(text) {
+            if (!text) { showStatus('无可发音的单词'); setTimeout(hideStatus, 1500); return; }
+            try {
+                if ('speechSynthesis' in window) {
+                    const utter = new SpeechSynthesisUtterance(text);
+                    // 尝试使用英文发音优先
+                    utter.lang = /[\u4e00-\u9fa5]/.test(text) ? 'en-US' : 'en-US';
+                    speechSynthesis.cancel();
+                    speechSynthesis.speak(utter);
+                    showStatus('正在发音…');
+                    // 隐藏提示在语音结束后
+                    utter.onend = function() { setTimeout(hideStatus, 500); };
+                } else {
+                    showStatus('当前浏览器不支持发音');
+                    setTimeout(hideStatus, 1500);
+                }
+            } catch (e) {
+                showStatus('发音失败');
+                setTimeout(hideStatus, 1500);
+            }
+        }
+
+        // modal close handlers
+        document.getElementById('modalClose').addEventListener('click', closeModal);
+        document.getElementById('wordModal').addEventListener('click', function(e){ if (e.target === this) closeModal(); });
+        document.addEventListener('keydown', function(e){ if(e.key==='Escape') closeModal(); });
+
+        // events
+        document.getElementById('applyFilters').addEventListener('click', () => {
+            currentQuery = document.getElementById('search').value.trim();
+            currentSort = document.getElementById('sort').value;
+            hideMastered = document.getElementById('hideMastered').checked;
+            currentPage = 1;
+            loadWords();
+        });
+        document.getElementById('clearSearch').addEventListener('click', () => {
+            document.getElementById('search').value = '';
+            currentQuery = '';
+            currentPage = 1;
+            loadWords();
+        });
+        document.getElementById('search').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') document.getElementById('applyFilters').click();
+        });
+
+        // 返回主页
+        document.getElementById('homeBtn').addEventListener('click', () => {
+            // 使用相对路径返回首页，如果需要改为绝对路径可调整为 '/index.html' 或 '/'
+            window.location.href = 'index.html';
+        });
+
+        // expose markMastered to global scope so inline onclick works
+        window.markMastered = markMastered;
+
+        // initial load
+        loadWords();
+    </script>
+</body>
+</html>

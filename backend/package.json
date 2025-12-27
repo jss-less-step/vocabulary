@@ -1,0 +1,22 @@
+{
+  "name": "english-vocabulary-backend",
+  "version": "1.0.0",
+  "description": "Backend server for English Vocabulary Chrome Extension",
+  "main": "server.js",
+  "scripts": {
+    "start": "node ./src/server.js",
+    "setup-mongodb": "node ./scripts/setup-mongodb.js",
+    "init-mongodb": "node ./scripts/init-mongodb.js",
+    "diagnose": "node ./scripts/diagnose.js",
+    "install-service": "node ./scripts/service-install.js",
+    "uninstall-service": "node ./scripts/service-uninstall.js"
+  },
+  "dependencies": {
+    "https-proxy-agent": "^7.0.6",
+    "jsdom": "^27.4.0",
+    "mongodb": "^7.0.0"
+  },
+  "devDependencies": {
+    "node-windows": "^1.0.0-beta.8"
+  }
+}

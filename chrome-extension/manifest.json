@@ -1,0 +1,30 @@
+{
+  "manifest_version": 3,
+  "name": "英语生词本助手",
+  "version": "1.0.0",
+  "description": "划词保存生词，自动获取释义，同步到本地词库",
+  "permissions": [
+    "activeTab",
+    "scripting",
+    "contextMenus",
+    "storage",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "src/background.js"
+  },
+  "content_scripts": [
+    {
+      "matches": ["<all_urls>"],
+      "js": ["src/content.js"],
+      "run_at": "document_start"
+    }
+  ],
+  "action": {
+    "default_popup": "popup.html",
+    "default_title": "英语生词本助手"
+  }
+}
