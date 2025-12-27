@@ -80,8 +80,18 @@ async function deleteCustomWord(req, res, pathname) {
 	}
 }
 
-module.exports = {
+// 统计生词的数量
+async function countCustomWordsAndMasteredWords(req, res) {
+	try {
+		const counts = await customWordsService.countCustomWordsAndMasteredWords();
+		sendJson(res, 200, { counts });
+	} catch (err) {
+		sendJson(res, 500, { error: err.message });
+	}
+	}
+	module.exports = {
 	getCustomWords,
 	addCustomWord,
-	deleteCustomWord
+	deleteCustomWord,
+	countCustomWordsAndMasteredWords
 };

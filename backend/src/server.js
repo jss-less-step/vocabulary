@@ -80,6 +80,10 @@ const server = http.createServer(async (req, res) => {
       return await customWordsController.deleteCustomWord(req, res, pathname);
     }
 
+    if(pathname === '/custom-words/count' && req.method === 'GET'){
+      return await customWordsController.countCustomWordsAndMasteredWords(req, res);
+    }
+
     // ============ 统计路由 ============
     if (pathname === '/mastered-stats' && req.method === 'GET') {
       return await statsController.getAllMasteredStats(req, res);

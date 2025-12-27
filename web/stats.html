@@ -622,8 +622,8 @@
           <div class="unit">个单词</div>
         </div>
         <div class="stat-card">
-          <div class="label">当前生词</div>
-          <div class="value" id="activeCustomWords">-</div>
+          <div class="label">已熟练生词</div>
+          <div class="value" id="masteredCustomWords">-</div>
           <div class="unit">个单词</div>
         </div>
       </div>
@@ -718,13 +718,12 @@
         document.getElementById('fetchedCount').textContent = data.fetched;
 
         // 生词本统计
-        const customWords = await fetch(`${API_BASE}/custom-words`);
+        const customWords = await fetch(`${API_BASE}/custom-words/count`);
         const cwData = await customWords.json();
-        const total = cwData.length;
-        const active = cwData.filter(w => !w.isMastered).length;
+        const counts = cwData.counts;
 
-        document.getElementById('totalCustomWords').textContent = total;
-        document.getElementById('activeCustomWords').textContent = active;
+        document.getElementById('totalCustomWords').textContent = counts.customWordsCount;
+        document.getElementById('masteredCustomWords').textContent = counts.masteredWordsCount;
       } catch (err) {
         console.error('加载统计失败:', err);
       }

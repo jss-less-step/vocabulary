@@ -624,6 +624,18 @@
         // 查看页面详情
         let currentWords = [];
         let currentPageContentId = null;
+        let currentPageContent = '';
+
+        function markWordInPageContent(){
+            console.log('Marking words in page content:', currentWords);
+            currentWords.forEach(w=>{
+                const word = w.word;
+                const regex = new RegExp(`\\b(${word})\\b`, 'gi');
+                currentPageContent = currentPageContent.replace(regex, `<mark style="background:#fffbcc;">$1</mark>`);
+            });
+            console.log('Marked content HTML:', currentPageContent);
+            document.getElementById('pageContent').innerHTML = currentPageContent;
+        }
 
         async function viewPage(id) {
             try {
@@ -635,10 +647,12 @@
                     return;
                 }
 
+                console.log('Loaded page content data:', data);
                 currentPageContentId = id; // 保存当前页面内容ID
+                currentPageContent = data.page.content; // 保存当前页面内容数据
+                currentWords = (data.words || []).sort((a,b)=>a.viewCount - b.viewCount); // 保存当前页面的生词列表
                 document.getElementById('modalTitle').textContent = data.page.title;
-                document.getElementById('pageContent').innerHTML = data.page.content;
-                currentWords = data.words || [];
+                markWordInPageContent();
                 renderWordsSidebar(currentWords);
                 document.getElementById('pageModal').style.display = 'block';
                 // 显示小抄侧边栏
@@ -1028,7 +1042,8 @@
                 const response = await fetch(`${API_BASE}/page-contents/${currentPageContentId}/detail`);
                 const data = await response.json();
                 if (data.page) {
-                    currentWords = data.words || [];
+                    currentWords = (data.words || []).sort((a,b)=>a.viewCount - b.viewCount);
+                    markWordInPageContent();
                     renderWordsSidebar(currentWords);
                 }
             } catch (err) {

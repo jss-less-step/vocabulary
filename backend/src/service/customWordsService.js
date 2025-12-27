@@ -198,8 +198,28 @@ async function getCustomWords(options = {}) {
 	}
 }
 
+// 统计自定义单词数量
+async function countCustomWordsAndMasteredWords() {
+	try {
+		const db = getDb();
+		const customWordsCollection = db.collection(COLLECTIONS.CUSTOM_WORDS);
+		const masteredWordsCollection = db.collection(COLLECTIONS.WORD_MASTERED);
+		const customWordsCount = await customWordsCollection.countDocuments();
+		const masteredWordsCount = await masteredWordsCollection.countDocuments();
+		return {
+			customWordsCount,
+			masteredWordsCount
+		};
+	} catch (err) {
+		console.error('统计自定义单词数量失败:', err.message);
+		throw err;
+	}
+}
+
+
 module.exports = {
 	addOrUpdateCustomWord,
 	deleteCustomWord,
-	getCustomWords
+	getCustomWords,
+	countCustomWordsAndMasteredWords
 };
